@@ -3,6 +3,7 @@ use base64::Engine;
 use bstr::ByteSlice;
 use miniserde::json::{Object, Value};
 use std::{
+    collections::HashSet,
     io::Write,
     process::{Command, Stdio},
 };
@@ -56,6 +57,7 @@ fn main() -> Result<()> {
 
     let mut stdin = rofi.stdin.take().unwrap();
 
+    let mut set = HashSet::new();
     let mut buf = Vec::new();
     for (_, data) in &dump {
         buf.clear();
@@ -65,10 +67,12 @@ fn main() -> Result<()> {
             && let Some(ty) = infer::get(&buf)
             && ty.mime_type() != "text/plain"
         {
+            set.insert(buf.clone());
             write!(stdin, "<{}> ({} bytes)\0", ty, buf.len())?;
             continue;
         }
 
+        set.insert(data.as_bytes().to_vec());
         buf.clear();
         let bytes = data.as_bytes();
         let start = bytes
@@ -80,7 +84,6 @@ fn main() -> Result<()> {
         buf.push(b'\0');
         stdin.write_all(&buf)?;
     }
-    buf.clear();
 
     let mut output = rofi.wait_with_output()?.stdout;
     if output.is_empty() {
@@ -97,36 +100,34 @@ fn main() -> Result<()> {
     }
 
     let data = std::mem::take(&mut dump[id as usize].1);
+    let mut mime_type = "text/plain";
 
+    buf.clear();
     if base64::engine::general_purpose::STANDARD_NO_PAD
         .decode_vec(&data, &mut buf)
         .is_ok()
         && let Some(ty) = infer::get(&buf)
         && ty.mime_type() != "text/plain"
     {
-        let mut tmp = tempfile::NamedTempFile::new()?;
-        tmp.write_all(&buf)?;
-        Command::new("xclip")
-            .args([
-                "-t",
-                ty.mime_type(),
-                "-se",
-                "c",
-                "-i",
-                tmp.path().to_str().expect("tempfile path should be utf-8"),
-            ])
-            .spawn()?
-            .wait()?;
+        mime_type = ty.mime_type();
     } else {
-        let mut xsel = Command::new("xsel")
-            .arg("-bi")
-            .stdin(Stdio::piped())
-            .spawn()?;
-        let mut stdin = xsel.stdin.take().unwrap();
-        stdin.write_all(data.as_bytes())?;
-        drop(stdin);
-        xsel.wait()?;
+        buf.clear();
+        buf.extend_from_slice(data.as_bytes());
     }
+
+    let mut copy = Command::new("ringboard")
+        .args(["add", "-m", mime_type, "-c", "-"])
+        .stdout(Stdio::null())
+        .stdin(Stdio::piped())
+        .spawn()?;
+    copy.stdin.take().unwrap().write_all(&buf)?;
+    copy.wait()?;
+
+    Command::new("ringboard")
+        .args(["remove", &dump[id as usize].0.to_string()])
+        .stdout(Stdio::null())
+        .spawn()?
+        .wait()?;
 
     Ok(())
 }

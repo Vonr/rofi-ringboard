@@ -2,7 +2,7 @@
 
 rofi-dmenu dialog for [Ringboard](https://github.com/SUPERCILEX/clipboard-history), mainly for personal use.
 
-Requires `rofi`, `xclip` and `xsel`.
+Requires `rofi` and `ringboard`.
 
 ## Installation
 
