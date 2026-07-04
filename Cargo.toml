@@ -1,0 +1,11 @@
+[package]
+name = "rofi-ringboard"
+version = "1.0.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1"
+base64 = "0.22"
+infer = "0.19"
+miniserde = "0.1"
+tempfile = "3"
