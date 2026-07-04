@@ -1,11 +1,12 @@
 [package]
 name = "rofi-ringboard"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2024"
 
 [dependencies]
 anyhow = "1"
 base64 = "0.22"
+bstr = "1"
 infer = "0.19"
 miniserde = "0.1"
 tempfile = "3"
