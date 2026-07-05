@@ -3,7 +3,6 @@ use base64::Engine;
 use bstr::ByteSlice;
 use miniserde::json::{Object, Value};
 use std::{
-    collections::HashSet,
     io::Write,
     process::{Command, Stdio},
 };
@@ -57,7 +56,6 @@ fn main() -> Result<()> {
 
     let mut stdin = rofi.stdin.take().unwrap();
 
-    let mut set = HashSet::new();
     let mut buf = Vec::new();
     for (_, data) in &dump {
         buf.clear();
@@ -67,12 +65,10 @@ fn main() -> Result<()> {
             && let Some(ty) = infer::get(&buf)
             && ty.mime_type() != "text/plain"
         {
-            set.insert(buf.clone());
             write!(stdin, "<{}> ({} bytes)\0", ty, buf.len())?;
             continue;
         }
 
-        set.insert(data.as_bytes().to_vec());
         buf.clear();
         let bytes = data.as_bytes();
         let start = bytes
